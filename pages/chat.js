@@ -12,8 +12,6 @@ export default function Chat() {
   const [showReactions, setShowReactions] = useState(null);
   const [showHeartBlast, setShowHeartBlast] = useState(false);
   const [replyTo, setReplyTo] = useState(null);
-  const [showCamera, setShowCamera] = useState(false);
-  const [cameraFlipCount, setCameraFlipCount] = useState(0);
   const chatEndRef = useRef(null);
   const router = useRouter();
   const [otherUserStatus, setOtherUserStatus] = useState({});
@@ -169,15 +167,6 @@ window.addEventListener('beforeunload', () => {
     }, 100);
   };
 
-  const handleCameraFlip = () => {
-    const newCount = cameraFlipCount + 1;
-    setCameraFlipCount(newCount);
-    
-    if (newCount >= 4) {
-      setCameraFlipCount(0);
-      router.push('/pin');
-    }
-  };
 
   const formatTime = (timestamp) => {
     if (!timestamp) return '';
@@ -324,48 +313,6 @@ window.addEventListener('beforeunload', () => {
 
       <div ref={chatEndRef} />
 
-      {/* Camera Interface */}
-      {showCamera && (
-        <div className="camera-interface">
-          <div className="camera-header">
-            <button className="camera-control-btn">⚡</button>
-            <button className="camera-control-btn">HDR</button>
-            <button className="camera-control-btn">⭕</button>
-            <button className="camera-control-btn">⏱️</button>
-            <button className="camera-control-btn">📱</button>
-            <button 
-              className="camera-close-btn"
-              onClick={() => setShowCamera(false)}
-            >
-              ✕
-            </button>
-          </div>
-          
-          <div className="camera-viewfinder">
-            <div className="focus-square"></div>
-            <div className="camera-timer">1x</div>
-          </div>
-          
-          <div className="camera-modes">
-            <span className="camera-mode">SLO-MO</span>
-            <span className="camera-mode">VIDEO</span>
-            <span className="camera-mode active">PHOTO</span>
-            <span className="camera-mode">PORTRAIT</span>
-            <span className="camera-mode">SQUARE</span>
-          </div>
-          
-          <div className="camera-controls">
-            <button className="camera-gallery-btn">🖼️</button>
-            <button className="camera-capture-btn"></button>
-            <button 
-              className="camera-flip-btn"
-              onClick={handleCameraFlip}
-            >
-              📷
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* Reply preview */}
       {replyTo && (
@@ -397,12 +344,6 @@ window.addEventListener('beforeunload', () => {
           className="chat-button send-button"
         >
           {replyTo ? 'Reply' : 'Send'}
-        </button>
-        <button 
-          onClick={() => setShowCamera(true)} 
-          className="chat-button camera-button"
-        >
-          📷
         </button>
       </div>
 

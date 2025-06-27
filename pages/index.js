@@ -5,14 +5,12 @@ import { useRouter } from 'next/router';
 import FlashOnIcon from '@mui/icons-material/FlashOn';
 import TimerIcon from '@mui/icons-material/Timer';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
-import FlipCameraAndroidIcon from '@mui/icons-material/FlipCameraAndroid';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 
 export default function CameraScreen() {
   const videoRef = useRef(null);
   const router = useRouter();
   const [mode, setMode] = useState('photo');
-  const [facing, setFacing] = useState('user');
   const [clicks, setClicks] = useState(0);
   const [lastClick, setLastClick] = useState(0);
   const [showUserPopup, setShowUserPopup] = useState(false);
@@ -29,13 +27,13 @@ export default function CameraScreen() {
 
   // Access camera
   useEffect(() => {
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: facing } })
+    navigator.mediaDevices.getUserMedia({ video: true })
       .then(stream => {
         videoRef.current.srcObject = stream;
         videoRef.current.play();
       })
       .catch(err => console.error('Camera error:', err));
-  }, [facing]);
+  }, []);
 
   // Triple tap handler
   function tripleTap() {
@@ -151,13 +149,6 @@ export default function CameraScreen() {
           {mode === 'video' && isRecording && <FiberManualRecordIcon />}
         </div>
         
-        <div 
-          onClick={() => setFacing(facing === 'user' ? 'environment' : 'user')}
-          className="flip-camera-btn-bottom"
-        >
-          <FlipCameraAndroidIcon fontSize="large" />
-          <span className="control-label">Flip</span>
-        </div>
       </div>
 
       {/* Hamburger Menu */}
@@ -305,26 +296,6 @@ export default function CameraScreen() {
           50% { opacity: 0.3; }
         }
 
-        .flip-camera-btn-bottom {
-          color: white;
-          cursor: pointer;
-          padding: 12px;
-          border-radius: 50%;
-          background: rgba(255, 255, 255, 0.1);
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          transition: all 0.3s ease;
-          z-index: 20;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-        }
-
-        .flip-camera-btn-bottom:hover {
-          background: rgba(255, 255, 255, 0.2);
-          transform: scale(1.1) rotate(180deg);
-        }
 
         .mode-selector {
           position: absolute;
@@ -368,10 +339,11 @@ export default function CameraScreen() {
           bottom: 70px;
           width: 100%;
           display: flex;
-          justify-content: space-around;
+          justify-content: center;
           align-items: center;
           padding: 0 30px;
           z-index: 20;
+          gap: 40px;
         }
 
         .last-photo-preview {
@@ -641,11 +613,6 @@ export default function CameraScreen() {
             height: 25px;
           }
           
-          .flip-camera-btn {
-            top: 60px;
-            right: 15px;
-            padding: 8px;
-          }
         }
       `}</style>
     </div>

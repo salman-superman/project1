@@ -205,21 +205,25 @@ body {
 }
 
 .own-message {
-  background: #DCF8C6;
-  color: #000;
+  background: linear-gradient(135deg, rgba(147, 51, 234, 0.8), rgba(79, 70, 229, 0.6));
+  color: #fff;
   align-self: flex-end;
   text-align: left;
   border-bottom-right-radius: 10px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   animation: slideInRight 0.3s ease;
 }
 
 .other-message {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.1));
+  background: linear-gradient(135deg, rgba(147, 51, 234, 0.3), rgba(79, 70, 229, 0.2));
   align-self: flex-start;
   text-align: left;
   color: #fff;
   border-bottom-left-radius: 5px;
   border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   animation: slideInLeft 0.3s ease;
 }
 
@@ -649,12 +653,14 @@ body {
   }
   
 .own-message {
-  background: linear-gradient(135deg, rgba(59, 153, 252, 0.8), rgba(59, 153, 252, 0.6));
+  background: linear-gradient(135deg, rgba(147, 51, 234, 0.8), rgba(79, 70, 229, 0.6));
   color: #fff;
   align-self: flex-end;
   text-align: right;
   border-bottom-right-radius: 5px;
   border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   animation: slideInRight 0.3s ease;
 }
   
