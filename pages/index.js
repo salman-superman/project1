@@ -107,8 +107,8 @@ export default function CameraScreen() {
         />
       )}
 
-      {/* Top Bar */}
-      <div className="camera-top-bar">
+      {/* Top Header */}
+      <div className="camera-top-header">
         <div className="camera-control-icon">
           <FlashOnIcon />
           <span className="control-label">Flash</span>
@@ -137,18 +137,27 @@ export default function CameraScreen() {
 
       {/* Camera Controls */}
       <div className="camera-controls">
-        <div className="last-photo-preview">
-          <div className="photo-placeholder" />
-          <span className="gallery-label">Gallery</span>
-        </div>
-        
         <div 
           className={`shutter-button ${mode === 'video' ? 'video-mode' : ''} ${isRecording ? 'recording' : ''}`}
           onClick={handleShutter}
         >
           {mode === 'video' && isRecording && <FiberManualRecordIcon />}
         </div>
-        
+      </div>
+
+      {/* Gallery Button */}
+      <div className="gallery-button-container">
+        <div className="last-photo-preview">
+          <div className="photo-placeholder" />
+          <span className="gallery-label">Gallery</span>
+        </div>
+      </div>
+
+      {/* Bottom Header */}
+      <div className="camera-bottom-header">
+        <div className="bottom-text">
+          <span>Camera Controls</span>
+        </div>
       </div>
 
       {/* Hamburger Menu */}
@@ -237,7 +246,7 @@ export default function CameraScreen() {
           }
         }
 
-        .camera-top-bar {
+        .camera-top-header {
           position: absolute;
           top: 0;
           width: 100%;
@@ -245,7 +254,7 @@ export default function CameraScreen() {
           justify-content: space-between;
           align-items: center;
           padding: 15px 25px;
-          background: linear-gradient(180deg, rgba(0,0,0,0.6) 0%, transparent 100%);
+          background: rgba(0, 0, 0, 0.8);
           z-index: 20;
         }
 
@@ -299,7 +308,7 @@ export default function CameraScreen() {
 
         .mode-selector {
           position: absolute;
-          bottom: 160px;
+          bottom: 250px;
           width: 100%;
           display: flex;
           justify-content: center;
@@ -336,14 +345,19 @@ export default function CameraScreen() {
 
         .camera-controls {
           position: absolute;
-          bottom: 70px;
+          bottom: 120px;
           width: 100%;
           display: flex;
           justify-content: center;
           align-items: center;
-          padding: 0 30px;
           z-index: 20;
-          gap: 40px;
+        }
+        
+        .gallery-button-container {
+          position: absolute;
+          bottom: 120px;
+          right: 30px;
+          z-index: 20;
         }
 
         .last-photo-preview {
@@ -359,6 +373,7 @@ export default function CameraScreen() {
           flex-direction: column;
           align-items: center;
         }
+        
 
         .last-photo-preview:hover {
           transform: scale(1.1);
@@ -390,14 +405,8 @@ export default function CameraScreen() {
           align-items: center;
           justify-content: center;
           cursor: pointer;
-          transition: all 0.3s ease;
           position: relative;
           overflow: hidden;
-        }
-
-        .shutter-button:hover {
-          transform: scale(1.1);
-          box-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
         }
 
         .shutter-button.video-mode {
@@ -578,17 +587,36 @@ export default function CameraScreen() {
             justify-content: space-between;
           }
           
-          .mode-selector {
-            gap: 15px;
-            bottom: 120px;
-            justify-content: center;
-            overflow-x: auto;
-          }
-          
-          .mode-option {
-            font-size: 12px;
-            padding: 5px 10px;
-          }
+        .mode-selector {
+          position: absolute;
+          bottom: 160px;
+          width: 100%;
+          display: flex;
+          justify-content: center;
+          gap: 30px;
+          z-index: 20;
+          overflow-x: auto;
+          padding: 0 10px;
+        }
+        
+        .camera-bottom-header {
+          position: absolute;
+          bottom: 0;
+          width: 100%;
+          background: rgba(0, 0, 0, 0.8);
+          z-index: 20;
+          padding: 5px 0;
+          display: flex;
+          flex-direction: column-reverse;
+          align-items: center;
+          height: 40px;
+        }
+        
+        .bottom-text {
+          margin-bottom: 2px;
+          color: white;
+          font-size: 10px;
+        }
           
           .camera-controls {
             bottom: 40px;
