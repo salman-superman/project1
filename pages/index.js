@@ -6,6 +6,7 @@ import FlashOnIcon from '@mui/icons-material/FlashOn';
 import TimerIcon from '@mui/icons-material/Timer';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
+import FlipCameraIosIcon from '@mui/icons-material/FlipCameraIos';
 
 export default function CameraScreen() {
   const videoRef = useRef(null);
@@ -16,6 +17,7 @@ export default function CameraScreen() {
   const [showUserPopup, setShowUserPopup] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [focusPoint, setFocusPoint] = useState(null);
+  const [facingMode, setFacingMode] = useState('user'); // 'user' for front, 'environment' for back
 
   // Ask user if not already set
   useEffect(() => {
@@ -27,13 +29,13 @@ export default function CameraScreen() {
 
   // Access camera
   useEffect(() => {
-    navigator.mediaDevices.getUserMedia({ video: true })
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: facingMode } })
       .then(stream => {
         videoRef.current.srcObject = stream;
         videoRef.current.play();
       })
       .catch(err => console.error('Camera error:', err));
-  }, []);
+  }, [facingMode]);
 
   // Triple tap handler
   function tripleTap() {
@@ -75,6 +77,11 @@ export default function CameraScreen() {
       // Photo capture logic would go here
       console.log('Photo captured!');
     }
+  };
+
+  // Handle camera switch
+  const handleCameraSwitch = () => {
+    setFacingMode(prevMode => prevMode === 'user' ? 'environment' : 'user');
   };
 
   return (
@@ -142,6 +149,10 @@ export default function CameraScreen() {
           onClick={handleShutter}
         >
           {mode === 'video' && isRecording && <FiberManualRecordIcon />}
+        </div>
+        <div className="camera-switch-icon" onClick={handleCameraSwitch}>
+          <FlipCameraIosIcon />
+          <span className="switch-label">Switch</span>
         </div>
       </div>
 
@@ -320,27 +331,23 @@ export default function CameraScreen() {
 
         .mode-option {
           color: white;
-          font-size: 16px;
+          font-size: 13px;
           font-weight: 600;
           cursor: pointer;
-          padding: 8px 16px;
+          padding: 5px 10px;
           border-radius: 20px;
-          transition: all 0.3s ease;
           opacity: 0.6;
+          background: transparent;
         }
 
         .mode-option.active {
           opacity: 1;
-          background: rgba(255, 255, 255, 0.1);
-          backdrop-filter: blur(10px);
-          -webkit-backdrop-filter: blur(10px);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          box-shadow: 0 4px 15px rgba(59, 153, 252, 0.3);
+          color: #3b99fc;
+          background: transparent;
         }
 
         .mode-option:hover {
           opacity: 1;
-          transform: translateY(-2px);
         }
 
         .camera-controls {
@@ -355,14 +362,14 @@ export default function CameraScreen() {
         
         .gallery-button-container {
           position: absolute;
-          bottom: 120px;
-          right: 30px;
+          bottom: 80px;
+          left: 15px;
           z-index: 20;
         }
 
         .last-photo-preview {
-          width: 50px;
-          height: 50px;
+          width: 40px;
+          height: 40px;
           border-radius: 8px;
           overflow: hidden;
           border: 2px solid rgba(255, 255, 255, 0.3);
@@ -415,6 +422,30 @@ export default function CameraScreen() {
 
         .shutter-button.recording {
           animation: recordingPulse 1s infinite;
+        }
+
+        .camera-switch-icon {
+          color: white;
+          cursor: pointer;
+          padding: 12px;
+          border-radius: 50%;
+          transition: all 0.3s ease;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          position: absolute;
+          right: 15px;
+        }
+
+        .camera-switch-icon:hover {
+          transform: scale(1.1);
+          color: #3b99fc;
+        }
+
+        .switch-label {
+          font-size: 10px;
+          color: white;
+          margin-top: 2px;
         }
 
         .shutter-button::before {
@@ -589,14 +620,14 @@ export default function CameraScreen() {
           
         .mode-selector {
           position: absolute;
-          bottom: 160px;
+          bottom: 120px;
           width: 100%;
           display: flex;
           justify-content: center;
-          gap: 30px;
+          gap: 10px;
           z-index: 20;
-          overflow-x: auto;
-          padding: 0 10px;
+          overflow-x: hidden;
+          padding: 0 5px;
         }
         
         .camera-bottom-header {
@@ -609,7 +640,7 @@ export default function CameraScreen() {
           display: flex;
           flex-direction: column-reverse;
           align-items: center;
-          height: 40px;
+          height: 60px;
         }
         
         .bottom-text {
@@ -618,14 +649,21 @@ export default function CameraScreen() {
           font-size: 10px;
         }
           
-          .camera-controls {
-            bottom: 40px;
-            padding: 0 15px;
-          }
+        .camera-controls {
+          position: absolute;
+          bottom: 50px;
+          width: 100%;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          gap: 20px;
+          z-index: 20;
+        }
           
           .shutter-button {
             width: 60px;
             height: 60px;
+            left: 10px;
           }
           
           .user-popup-content {
