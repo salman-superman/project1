@@ -18,6 +18,10 @@ export default function CameraScreen() {
   const [isRecording, setIsRecording] = useState(false);
   const [focusPoint, setFocusPoint] = useState(null);
   const [facingMode, setFacingMode] = useState('user'); // 'user' for front, 'environment' for back
+  const [secretDrawingMode, setSecretDrawingMode] = useState(false);
+  const [drawingPath, setDrawingPath] = useState([]);
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [drawingTimer, setDrawingTimer] = useState(null);
 
   // Ask user if not already set
   useEffect(() => {
@@ -43,7 +47,9 @@ export default function CameraScreen() {
     if (now - lastClick < 800) {
       const next = clicks + 1;
       if (next >= 3) {
-        router.push('/pin');
+        // Activate secret drawing mode (invisible)
+        setSecretDrawingMode(true);
+        startDrawingTimer();
         setClicks(0);
       } else {
         setClicks(next);
@@ -54,14 +60,153 @@ export default function CameraScreen() {
     setLastClick(now);
   }
 
+  // Start drawing timer (30 seconds for secret drawing)
+  function startDrawingTimer() {
+    const timer = setTimeout(() => {
+      setSecretDrawingMode(false);
+      setDrawingPath([]);
+    }, 30000);
+    setDrawingTimer(timer);
+  }
+
+  // Handle secret drawing start
+  function handleSecretDrawStart(e) {
+    if (!secretDrawingMode) return;
+    setIsDrawing(true);
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX || e.touches?.[0]?.clientX) - rect.left;
+    const y = (e.clientY || e.touches?.[0]?.clientY) - rect.top;
+    setDrawingPath([{ x, y }]);
+  }
+
+  // Handle secret drawing move
+  function handleSecretDrawMove(e) {
+    if (!secretDrawingMode || !isDrawing) return;
+    e.preventDefault();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX || e.touches?.[0]?.clientX) - rect.left;
+    const y = (e.clientY || e.touches?.[0]?.clientY) - rect.top;
+    setDrawingPath(prev => [...prev, { x, y }]);
+  }
+
+  // Handle secret drawing end
+  function handleSecretDrawEnd() {
+    if (!secretDrawingMode) return;
+    setIsDrawing(false);
+    // Check if drawn pattern resembles a triangle
+    if (checkTrianglePattern(drawingPath)) {
+      clearTimeout(drawingTimer);
+      setSecretDrawingMode(false);
+      setDrawingPath([]);
+      router.push('/pin');
+    }
+  }
+
+  // Triangle pattern recognition
+  function checkTrianglePattern(path) {
+    // Require minimum drawing points
+    if (path.length < 30) return false;
+    
+    // Sample points for analysis (every 3rd point to reduce noise)
+    const points = path.filter((_, i) => i % 3 === 0);
+    if (points.length < 10) return false;
+    
+    // Calculate bounding box
+    const xs = points.map(p => p.x);
+    const ys = points.map(p => p.y);
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+    
+    const width = maxX - minX;
+    const height = maxY - minY;
+    
+    // Triangle should have reasonable dimensions (not too small)
+    if (width < 20 || height < 20) return false;
+    
+    // Check if the shape is roughly closed (end point near start point)
+    const start = points[0];
+    const end = points[points.length - 1];
+    const distanceToClose = Math.sqrt(
+      Math.pow(end.x - start.x, 2) + Math.pow(end.y - start.y, 2)
+    );
+    
+    // Allow some tolerance for closing the triangle
+    const maxCloseDistance = Math.max(width, height) * 0.3;
+    const isClosed = distanceToClose < maxCloseDistance;
+    
+    // Detect corners by finding points where direction changes significantly
+    let corners = [];
+    const threshold = Math.PI / 3; // 60 degrees
+    
+    for (let i = 2; i < points.length - 2; i++) {
+      const prev = points[i - 2];
+      const curr = points[i];
+      const next = points[i + 2];
+      
+      // Calculate angles
+      const angle1 = Math.atan2(curr.y - prev.y, curr.x - prev.x);
+      const angle2 = Math.atan2(next.y - curr.y, next.x - curr.x);
+      
+      let angleDiff = Math.abs(angle2 - angle1);
+      if (angleDiff > Math.PI) angleDiff = 2 * Math.PI - angleDiff;
+      
+      // If there's a significant direction change, it's likely a corner
+      if (angleDiff > threshold) {
+        corners.push({ point: curr, index: i, angle: angleDiff });
+      }
+    }
+    
+    // Filter corners that are too close to each other
+    const filteredCorners = [];
+    const minCornerDistance = Math.max(width, height) * 0.2;
+    
+    for (let corner of corners) {
+      let tooClose = false;
+      for (let existing of filteredCorners) {
+        const dist = Math.sqrt(
+          Math.pow(corner.point.x - existing.point.x, 2) + 
+          Math.pow(corner.point.y - existing.point.y, 2)
+        );
+        if (dist < minCornerDistance) {
+          tooClose = true;
+          break;
+        }
+      }
+      if (!tooClose) {
+        filteredCorners.push(corner);
+      }
+    }
+    
+    // Triangle should have approximately 3 corners and be roughly closed
+    return filteredCorners.length >= 2 && 
+           filteredCorners.length <= 4 && 
+           (isClosed || filteredCorners.length >= 3) &&
+           path.length >= 30;
+  }
+
+  // Clear drawing timer on unmount
+  useEffect(() => {
+    return () => {
+      if (drawingTimer) {
+        clearTimeout(drawingTimer);
+      }
+    };
+  }, [drawingTimer]);
+
   // Ask user1/user2
   function chooseUser(user) {
     localStorage.setItem('username', user);
     setShowUserPopup(false);
   }
 
-  // Handle focus tap
+  // Handle focus tap (also handles secret drawing)
   const handleFocusTap = (e) => {
+    if (secretDrawingMode) {
+      // Don't show focus indicator in secret drawing mode
+      return;
+    }
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -93,6 +238,12 @@ export default function CameraScreen() {
         muted
         className="camera-video"
         onClick={handleFocusTap}
+        onMouseDown={handleSecretDrawStart}
+        onMouseMove={handleSecretDrawMove}
+        onMouseUp={handleSecretDrawEnd}
+        onTouchStart={handleSecretDrawStart}
+        onTouchMove={handleSecretDrawMove}
+        onTouchEnd={handleSecretDrawEnd}
       />
       <div className="camera-grid">
         <div className="camera-grid-line"></div>
@@ -193,6 +344,7 @@ export default function CameraScreen() {
         </div>
       )}
 
+
       <style jsx>{`
         .camera-container {
           width: 100vw;
@@ -279,7 +431,6 @@ export default function CameraScreen() {
         }
 
         .camera-control-icon:hover {
-          background: rgba(255, 255, 255, 0.2);
           transform: scale(1.1);
         }
 
@@ -384,7 +535,6 @@ export default function CameraScreen() {
 
         .last-photo-preview:hover {
           transform: scale(1.1);
-          border-color: #3b99fc;
         }
 
         .photo-placeholder {
@@ -439,7 +589,6 @@ export default function CameraScreen() {
 
         .camera-switch-icon:hover {
           transform: scale(1.1);
-          color: #3b99fc;
         }
 
         .switch-label {
@@ -514,8 +663,7 @@ export default function CameraScreen() {
         }
 
         .hamburger-menu:hover .hamburger-line {
-          background: #3b99fc;
-          box-shadow: 0 0 10px rgba(59, 153, 252, 0.5);
+          background: white;
         }
 
         .user-popup-overlay {
@@ -598,6 +746,7 @@ export default function CameraScreen() {
             transform: translateY(0);
           }
         }
+
 
         @media (max-width: 768px) {
           .camera-container {

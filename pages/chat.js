@@ -37,12 +37,16 @@ export default function Chat() {
     });
   }, [otherUser]);
 
-  const onlineRef = ref(db, 'status/' + currentUser);
+const onlineRef = ref(db, 'status/' + currentUser);
 set(onlineRef, { online: true });
 
-window.addEventListener('beforeunload', () => {
-  set(onlineRef, { online: false, lastSeen: Date.now() });
-});
+useEffect(() => {
+  const handleBeforeUnload = () => {
+    set(onlineRef, { online: false, lastSeen: Date.now() });
+  };
+  window.addEventListener('beforeunload', handleBeforeUnload);
+  return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+}, [onlineRef]);
 
 
   useEffect(() => {
@@ -239,7 +243,17 @@ window.addEventListener('beforeunload', () => {
             )}
 
             {msg.type === 'image' ? (
-              <img src={msg.image} alt="sent" className="chat-image" onClick={() => window.open(msg.image, '_blank')} />
+              <img
+  src={msg.image}
+  alt="sent"
+  className="chat-image"
+  onClick={() => {
+    if (typeof window !== 'undefined') {
+      window.open(msg.image, '_blank');
+    }
+  }}
+/>
+
             ) : (
               <div className="chat-text">{msg.text}</div>
             )}
