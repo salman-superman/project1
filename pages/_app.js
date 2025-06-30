@@ -23,11 +23,12 @@ export default function App({ Component, pageProps }) {
 
   return (
     <>
-      <Head>
-        <link rel="manifest" href="/manifest.json" />
-        <link rel="apple-touch-icon" href="/icon-192.png" />
-        <meta name="theme-color" content="#000000" />
-      </Head>
+  <Head>
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icon-192.png" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+</Head>
 
       {/* 👇 This button will show only when install is possible */}
       <button
