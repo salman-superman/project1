@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { db } from '../firebaseConfig';
+import { db, dbFirestore } from '../firebaseConfig';
 import { onValue, push, ref, set, update, remove } from 'firebase/database';
+import { onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { useRouter } from 'next/router';
 
 export default function Chat() {
@@ -12,6 +13,7 @@ export default function Chat() {
   const [showReactions, setShowReactions] = useState(null);
   const [showHeartBlast, setShowHeartBlast] = useState(false);
   const [replyTo, setReplyTo] = useState(null);
+  const [showIncomingCall, setShowIncomingCall] = useState(false);
   const chatEndRef = useRef(null);
   const router = useRouter();
   const [otherUserStatus, setOtherUserStatus] = useState({});
@@ -40,13 +42,32 @@ export default function Chat() {
 const onlineRef = ref(db, 'status/' + currentUser);
 set(onlineRef, { online: true });
 
-useEffect(() => {
-  const handleBeforeUnload = () => {
-    set(onlineRef, { online: false, lastSeen: Date.now() });
-  };
-  window.addEventListener('beforeunload', handleBeforeUnload);
-  return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-}, [onlineRef]);
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      set(onlineRef, { online: false, lastSeen: Date.now() });
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [onlineRef]);
+
+  useEffect(() => {
+    const callDocRef = doc(dbFirestore, "calls", "test-call");
+
+    const unsubscribe = onSnapshot(callDocRef, (doc) => {
+      const data = doc.data();
+      if (data?.to === currentUser && data?.isRinging && !data?.accepted) {
+        // ✅ Incoming call
+        console.log("Incoming call from", data.from);
+
+        // Show call UI ONLY if user is in chat screen
+        if (window.location.pathname === "/chat") {
+          setShowIncomingCall(true);
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [currentUser]);
 
 
   useEffect(() => {
@@ -171,6 +192,35 @@ useEffect(() => {
     }, 100);
   };
 
+  
+
+  const acceptCall = async () => {
+    await updateDoc(doc(dbFirestore, "calls", "test-call"), {
+      accepted: true
+    });
+    setShowIncomingCall(false);
+  };
+
+  const rejectCall = async () => {
+    await deleteDoc(doc(dbFirestore, "calls", "test-call"));
+    setShowIncomingCall(false);
+  };
+
+ const startCall = async () => {
+  try {
+    await set(doc(dbFirestore, "calls", "test-call"), {
+      from: currentUser,
+      to: otherUser,
+      isRinging: true,
+      accepted: false,
+      timestamp: Date.now()
+    });
+    alert("Call started!");
+  } catch (err) {
+    console.error("Call error:", err);
+    alert("Failed to start call");
+  }
+};
 
   const formatTime = (timestamp) => {
     if (!timestamp) return '';
@@ -209,6 +259,7 @@ useEffect(() => {
         </div>
         <div className="header-buttons">
           <button className="clear-chat-button" onClick={handleClearChat}>Clear Chat</button>
+          <button className="call-button" onClick={startCall}>📞 Call</button>
           <button className="exit-button" onClick={handleExit}>Exit</button>
         </div>
       </div>
@@ -322,6 +373,14 @@ useEffect(() => {
       {otherUserTyping && (
         <div className="typing-indicator">
           <span className="dot"></span><span className="dot"></span><span className="dot"></span>
+        </div>
+      )}
+
+      {showIncomingCall && (
+        <div className="incoming-call-popup">
+          <p>📞 Incoming call...</p>
+          <button onClick={acceptCall}>Accept</button>
+          <button onClick={rejectCall}>Reject</button>
         </div>
       )}
 
