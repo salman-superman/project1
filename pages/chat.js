@@ -3,8 +3,12 @@ import { db, dbFirestore } from '../firebaseConfig';
 import { onValue, push, ref, set, update, remove } from 'firebase/database';
 import { onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { useRouter } from 'next/router';
-
+import TypingIndicator from '../components/TypingIndicator.js';
+import GiftButton from '../components/GiftButton';
+import GiftComposerModal from '../components/GiftComposerModal';
+import GiftMessage from '../components/GiftMessage';
 export default function Chat() {
+
   const [messages, setMessages] = useState([]);
   const [message, setMessage] = useState('');
   const [typing, setTyping] = useState(false);
@@ -12,14 +16,23 @@ export default function Chat() {
   const [previewImage, setPreviewImage] = useState(null);
   const [showReactions, setShowReactions] = useState(null);
   const [showHeartBlast, setShowHeartBlast] = useState(false);
+  const [showFallingHearts, setShowFallingHearts] = useState(false);
+  const [circleDrawn, setCircleDrawn] = useState(false);
   const [replyTo, setReplyTo] = useState(null);
   const [showIncomingCall, setShowIncomingCall] = useState(false);
+  const [expandedMessages, setExpandedMessages] = useState(new Set());
   const chatEndRef = useRef(null);
   const router = useRouter();
   const [otherUserStatus, setOtherUserStatus] = useState({});
   const [menuClickCount, setMenuClickCount] = useState(0);
   const [touchStartX, setTouchStartX] = useState(null);
+  const [touchStartY, setTouchStartY] = useState(null);
+  const [touchPath, setTouchPath] = useState([]);
   const chatInputRef = useRef(null);
+  const [showTypingAvatar, setShowTypingAvatar] = useState(false);
+  const [showGiftBlast, setShowGiftBlast] = useState(false);
+  const [showGiftModal, setShowGiftModal] = useState(false);
+
 
   const currentUser = typeof window !== 'undefined' ? localStorage.getItem('username') : 'user1';
   const otherUser = currentUser === 'user1' ? 'user2' : 'user1';
@@ -39,8 +52,11 @@ export default function Chat() {
     });
   }, [otherUser]);
 
-const onlineRef = ref(db, 'status/' + currentUser);
-set(onlineRef, { online: true });
+  const onlineRef = ref(db, 'status/' + currentUser);
+  
+  useEffect(() => {
+    set(onlineRef, { online: true });
+  }, []);
 
   useEffect(() => {
     const handleBeforeUnload = () => {
@@ -70,6 +86,7 @@ set(onlineRef, { online: true });
   }, [currentUser]);
 
 
+  
   useEffect(() => {
     const messagesRef = ref(db, 'messages');
     onValue(messagesRef, (snapshot) => {
@@ -89,11 +106,26 @@ set(onlineRef, { online: true });
 
   useEffect(() => {
     const typingRef = ref(db, 'typing/' + otherUser);
-    onValue(typingRef, (snapshot) => {
-      setOtherUserTyping(snapshot.val());
-    });
-  }, []);
+    let timeout;
 
+    const unsubscribe = onValue(typingRef, (snapshot) => {
+      const isTyping = snapshot.val();
+      if (isTyping) {
+        setShowTypingAvatar(true);
+        clearTimeout(timeout); // stop any previous hiding
+      } else {
+        timeout = setTimeout(() => {
+          setShowTypingAvatar(false);
+        }, 3000); // Wait 3 seconds before hiding
+      }
+    });
+
+    return () => unsubscribe();
+  }, [otherUser]);
+
+
+  // Commented-out gift feature code removed to resolve TypeScript parsing errors.
+  // If needed, this can be re-implemented or uncommented after proper integration.
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [messages, otherUserTyping]);
@@ -103,7 +135,7 @@ set(onlineRef, { online: true });
     const msgRef = push(ref(db, 'messages'));
     set(msgRef, {
       text: message,
-      time: Date.now(),
+      time: Date.now(), 
       sender: currentUser,
       seen: false,
       type: 'text'
@@ -121,10 +153,14 @@ set(onlineRef, { online: true });
     setTimeout(() => {
       update(ref(db, 'typing'), { [currentUser]: false });
       setTyping(false);
-    }, 1500);
+    }, 1000);
   };
 
   const deleteMessage = (id) => {
+    if (circleDrawn) {
+      alert("Messages are protected from deletion because a circle has been drawn.");
+      return;
+    }
     remove(ref(db, `messages/${id}`));
   };
 
@@ -138,6 +174,7 @@ set(onlineRef, { online: true });
     }
   };
 
+  // Moved to return statement
   const replyToMessage = (msg) => {
     setReplyTo(msg);
     if (chatInputRef.current) {
@@ -146,7 +183,17 @@ set(onlineRef, { online: true });
   };
 
   const handleTouchStart = (e) => {
-    setTouchStartX(e.touches[0].clientX);
+    const touch = e.touches[0];
+    setTouchStartX(touch.clientX);
+    setTouchStartY(touch.clientY);
+    setTouchPath([{ x: touch.clientX, y: touch.clientY }]);
+  };
+
+  const handleTouchMove = (e) => {
+    if (touchStartX !== null) {
+      const touch = e.touches[0];
+      setTouchPath(prev => [...prev, { x: touch.clientX, y: touch.clientY }]);
+    }
   };
 
   const handleTouchEnd = (e, msg) => {
@@ -154,12 +201,30 @@ set(onlineRef, { online: true });
       const touchEndX = e.changedTouches[0].clientX;
       if (touchEndX - touchStartX > 50) { // Swipe right threshold
         replyToMessage(msg);
+      } else {
+        // Check if the touch path resembles a circle
+        if (touchPath.length > 10) {
+          const start = touchPath[0];
+          const end = touchPath[touchPath.length - 1];
+          const dx = Math.abs(start.x - end.x);
+          const dy = Math.abs(start.y - end.y);
+          if (dx < 30 && dy < 30) { // Rough check if start and end are close
+            setCircleDrawn(true);
+            alert("Circle detected! Messages are now protected from deletion for you.");
+          }
+        }
       }
       setTouchStartX(null);
+      setTouchStartY(null);
+      setTouchPath([]);
     }
   };
 
   const handleClearChat = () => {
+    if (circleDrawn) {
+      alert("Messages are protected from deletion because a circle has been drawn.");
+      return;
+    }
     if (window.confirm("Are you sure you want to clear all messages?")) {
       set(ref(db, 'messages'), null);
     }
@@ -169,6 +234,71 @@ set(onlineRef, { online: true });
     set(onlineRef, { online: false, lastSeen: Date.now() });
     router.push('/');
   };
+
+  const triggerFallingHearts = () => {
+    // Store the action in Firebase to synchronize across users
+    const actionRef = push(ref(db, 'actions'));
+    set(actionRef, {
+      type: 'fallingHearts',
+      time: Date.now(),
+      sender: currentUser
+    });
+  };
+
+  useEffect(() => {
+    const actionsRef = ref(db, 'actions');
+    onValue(actionsRef, (snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        const latestAction = Object.values(data).pop(); // Get the latest action
+        if (latestAction.type === 'fallingHearts') {
+          setShowFallingHearts(true);
+          setTimeout(() => {
+            setShowFallingHearts(false);
+            // Optionally clean up old actions to prevent database growth
+            if (Object.keys(data).length > 10) {
+              const oldestKey = Object.keys(data)[0];
+              remove(ref(db, `actions/${oldestKey}`));
+            }
+          }, 5000);
+        }
+      }
+    });
+  }, [currentUser]);
+
+ const handleSendGift = (giftMessage) => {
+  // Show sending animation
+  setShowGiftBlast(true);
+  
+  const msgRef = push(ref(db, 'messages'));
+  set(msgRef, {
+    text: giftMessage,
+    time: Date.now(),
+    sender: currentUser, // e.g. "user1"
+    seen: false,
+    type: "gift",       // <- Must be "gift"
+    opened: false       // <- New field!
+  });
+  
+  // Do not manually update messages state to avoid duplication
+  // The Firebase onValue listener will handle the update
+  
+  setTimeout(() => {
+    setShowGiftBlast(false);
+    // Shake effect when gift appears in chat
+    setTimeout(() => {
+      const lastMessage = document.querySelector('.message-container:last-child');
+      if (lastMessage) {
+        lastMessage.classList.add('gift-arrival-shake');
+        setTimeout(() => {
+          lastMessage.classList.remove('gift-arrival-shake');
+        }, 1000);
+      }
+      // Scroll to the latest message
+      chatEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }, 300);
+  }, 3000);
+};
 
   const sendReply = () => {
     if (message.trim() === '') return;
@@ -206,47 +336,59 @@ set(onlineRef, { online: true });
     setShowIncomingCall(false);
   };
 
- const startCall = async () => {
-  try {
-    await set(doc(dbFirestore, "calls", "test-call"), {
-      from: currentUser,
-      to: otherUser,
-      isRinging: true,
-      accepted: false,
-      timestamp: Date.now()
-    });
-    alert("Call started!");
-  } catch (err) {
-    console.error("Call error:", err);
-    alert("Failed to start call");
-  }
-};
+  const startCall = async () => {
+    try {
+      await set(doc(dbFirestore, "calls", "test-call"), {
+        from: currentUser,
+        to: otherUser,
+        isRinging: true,
+        accepted: false,
+        timestamp: Date.now()
+      });
+      alert("Call started!");
+    } catch (err) {
+      console.error("Call error:", err);
+      alert("Failed to start call");
+    }
+  };
 
   const formatTime = (timestamp) => {
     if (!timestamp) return '';
     const date = new Date(timestamp);
     return isNaN(date) ? '' : date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
-<button
-  onClick={() => {
-    const newCount = menuClickCount + 1;
-    setMenuClickCount(newCount);
-    
-    if (newCount >= 3) {
-      setMenuClickCount(0);
-      router.push('/pin');
-    } else if (confirm("Are you sure you want to clear all messages?")) {
-      set(ref(db, 'messages'), null);
+
+  const shouldTruncateMessage = (text) => {
+    if (!text || typeof text !== 'string') return false;
+    const lines = text.split('\n');
+    return lines.length > 6 || text.length > 300; // 6 lines or approximately 50 chars * 6 lines
+  };
+
+  const getTruncatedMessage = (text) => {
+    const lines = text.split('\n');
+    if (lines.length > 6) {
+      return lines.slice(0, 6).join('\n');
     }
-  }}
-  className="clear-chat-button"
->
-  Clear Chat 🧹
-</button>
+    if (text.length > 300) {
+      return text.substring(0, 300);
+    }
+    return text;
+  };
+
+  const toggleMessageExpansion = (messageId) => {
+    const newExpanded = new Set(expandedMessages);
+    if (newExpanded.has(messageId)) {
+      newExpanded.delete(messageId);
+    } else {
+      newExpanded.add(messageId);
+    }
+    setExpandedMessages(newExpanded);
+  };
+  // Button moved to return statement
 
 
   return (
-    <>
+    <div className="chat-wrapper">
       <div className="chat-header">
         <div className="chat-header-left">
           <div className={`status-indicator ${otherUserStatus?.online ? 'online-status' : 'offline-status'}`}>
@@ -258,16 +400,45 @@ set(onlineRef, { online: true });
           </div>
         </div>
         <div className="header-buttons">
-          <button className="clear-chat-button" onClick={handleClearChat}>Clear Chat</button>
-          <button className="call-button" onClick={startCall}>📞 Call</button>
-          <button className="exit-button" onClick={handleExit}>Exit</button>
+          <span className="header-link" onClick={handleClearChat}>Clear Chat</span>
+          <span className="header-separator">|</span>
+          <span className="header-link" onClick={startCall}>📞 Call</span>
+          <span className="header-separator">|</span>
+          <span className="header-link" onClick={triggerFallingHearts}>Fall</span>
+          <span className="header-separator">|</span>
+          <span className="header-link" onClick={handleExit}>Exit</span>
+          <GiftButton onOpen={() => setShowGiftModal(true)} />
         </div>
       </div>
       <div className="chat-container">
+        {showGiftBlast && (
+          <div className="gift-blast-container">
+            {Array.from({ length: 20 }).map((_, i) => (
+              <div
+                key={i}
+                className="gift-blast"
+                style={{
+                  left: `${Math.random() * 90 + 5}%`,
+                  animationDelay: `${Math.random() * 1.5}s`
+                }}
+              >
+                🎁
+              </div>
+            ))}
+          </div>
+        )}
+
         {showHeartBlast && (
           <div className="heart-blast-container">
             {Array.from({ length: 30 }).map((_, i) => (
               <div key={i} className="heart-blast heart-blast-bottom-to-top" style={{ left: `${Math.random() * 80 + 10}%`, animationDelay: `${Math.random() * 1.5}s` }}>❤️</div>
+            ))}
+          </div>
+        )}
+        {showFallingHearts && (
+          <div className="heart-blast-container">
+            {Array.from({ length: 25 }).map((_, i) => (
+              <div key={i} className="heart-blast heart-fall-top-to-bottom" style={{ left: `${Math.random() * 80 + 10}%`, animationDelay: `${Math.random() * 2}s` }}>❤️</div>
             ))}
           </div>
         )}
@@ -276,105 +447,135 @@ set(onlineRef, { online: true });
             key={msg.id || index}
             className={`message-container ${msg.sender === currentUser ? 'own-message-container' : 'other-message-container'}`}
             onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
             onTouchEnd={(e) => handleTouchEnd(e, msg)}
           >
-            <div
-              className={`chat-bubble ${msg.sender === currentUser ? 'own-message' : 'other-message'}`}
-              onDoubleClick={() => addReaction(msg.id, '❤️')}
-            >
-            {/* Reply indicator */}
-            {msg.replyTo && (
-              <div className="reply-indicator">
-                <div className="reply-line"></div>
-                <div className="reply-content">
-                  <span className="reply-sender">{msg.replyTo.sender}</span>
-                  <span className="reply-text">{msg.replyTo.text}</span>
+            {msg.type === 'gift' ? (
+              <GiftMessage
+                message={msg.text}
+                isSender={msg.sender === currentUser}
+                isOpened={msg.opened || false}
+                onOpen={() => {
+                  // Mark as opened in database
+                  update(ref(db, `messages/${msg.id}`), { opened: true });
+                  setShowHeartBlast(true);
+                  setTimeout(() => setShowHeartBlast(false), 3000);
+                }}
+                onDoubleTap={() => {
+                  // You can add additional love effect handling here if needed
+                }}
+              />
+            ) : (
+              <div className={`chat-bubble ${msg.sender === currentUser ? 'own-message' : 'other-message'}`}>
+                {/* Keep all your existing regular message rendering code here */}
+                {msg.replyTo && (
+                  <div className="reply-indicator">
+                    <div className="reply-line"></div>
+                    <div className="reply-content">
+                      <span className="reply-sender">{msg.replyTo.sender}</span>
+                      <span className="reply-text">{msg.replyTo.text}</span>
+                    </div>
+                  </div>
+                )}
+                {msg.type === 'image' ? (
+                  <img
+                    src={msg.image}
+                    alt="sent"
+                    className="chat-image"
+                    onClick={() => {
+                      if (typeof window !== 'undefined') {
+                        window.open(msg.image, '_blank');
+                      }
+                    }}
+                  />
+                ) : (
+                  <div className="chat-text">
+                    {shouldTruncateMessage(msg.text) && !expandedMessages.has(msg.id) ? (
+                      <>
+                        {getTruncatedMessage(msg.text)}
+                        <button 
+                          className="read-more-btn" 
+                          onClick={() => toggleMessageExpansion(msg.id)}
+                        >
+                          ...Read more
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        {msg.text}
+                        {shouldTruncateMessage(msg.text) && expandedMessages.has(msg.id) && (
+                          <button 
+                            className="read-less-btn" 
+                            onClick={() => toggleMessageExpansion(msg.id)}
+                          >
+                            Show less
+                          </button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                )}
+                {/* Reactions */}
+                {msg.reactions && (
+                  <div className="message-reactions">
+                    {Object.entries(msg.reactions).map(([user, emoji]) => (
+                      <span key={user} className="reaction-emoji">{emoji}</span>
+                    ))}
+                  </div>
+                )}
+                <div className="chat-meta">
+                  <span className="chat-time">{formatTime(msg.time)}</span>
+                  {msg.sender === currentUser && (
+                    <span className="chat-tick">{msg.seen ? '✓✓' : '✓'}</span>
+                  )}
                 </div>
               </div>
             )}
-
-            {msg.type === 'image' ? (
-              <img
-  src={msg.image}
-  alt="sent"
-  className="chat-image"
-  onClick={() => {
-    if (typeof window !== 'undefined') {
-      window.open(msg.image, '_blank');
-    }
-  }}
-/>
-
-            ) : (
-              <div className="chat-text">{msg.text}</div>
-            )}
-
-            {/* Reactions */}
-            {msg.reactions && (
-              <div className="message-reactions">
-                {Object.entries(msg.reactions).map(([user, emoji]) => (
-                  <span key={user} className="reaction-emoji">{emoji}</span>
+            
+            {/* Keep your message actions and reaction picker here */}
+            <div className="message-actions">
+              <button 
+                className="action-btn reply-btn" 
+                onClick={() => replyToMessage(msg)}
+                title="Reply"
+              >
+                ↩️
+              </button>
+              <button 
+                className="action-btn reaction-btn" 
+                onClick={() => setShowReactions(showReactions === msg.id ? null : msg.id)}
+                title="React"
+              >
+                😊
+              </button>
+              {msg.sender === currentUser && (
+                <button 
+                  className="action-btn delete-btn" 
+                  onClick={() => deleteMessage(msg.id)}
+                  title="Delete"
+                >
+                  🗑️
+                </button>
+              )}
+            </div>
+            
+            {showReactions === msg.id && (
+              <div className="reaction-picker">
+                {['❤️', '😂', '😮', '😢', '👍', '🔥'].map(emoji => (
+                  <button
+                    key={emoji}
+                    className="reaction-option"
+                    onClick={() => addReaction(msg.id, emoji)}
+                  >
+                    {emoji}
+                  </button>
                 ))}
               </div>
             )}
-
-            <div className="chat-meta">
-              <span className="chat-time">{formatTime(msg.time)}</span>
-              {msg.sender === currentUser && (
-                <span className="chat-tick">{msg.seen ? '✓✓' : '✓'}</span>
-              )}
-            </div>
           </div>
+        ))}
 
-          {/* Message actions */}
-          <div className="message-actions">
-            <button 
-              className="action-btn reply-btn" 
-              onClick={() => replyToMessage(msg)}
-              title="Reply"
-            >
-              ↩️
-            </button>
-            <button 
-              className="action-btn reaction-btn" 
-              onClick={() => setShowReactions(showReactions === msg.id ? null : msg.id)}
-              title="React"
-            >
-              😊
-            </button>
-            {msg.sender === currentUser && (
-              <button 
-                className="action-btn delete-btn" 
-                onClick={() => deleteMessage(msg.id)}
-                title="Delete"
-              >
-                🗑️
-              </button>
-            )}
-          </div>
-
-          {/* Reaction picker */}
-          {showReactions === msg.id && (
-            <div className="reaction-picker">
-              {['❤️', '😂', '😮', '😢', '😡', '👍', '👎', '🔥'].map(emoji => (
-                <button
-                  key={emoji}
-                  className="reaction-option"
-                  onClick={() => addReaction(msg.id, emoji)}
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      ))}
-
-      {otherUserTyping && (
-        <div className="typing-indicator">
-          <span className="dot"></span><span className="dot"></span><span className="dot"></span>
-        </div>
-      )}
+      {showTypingAvatar && <TypingIndicator />}
 
       {showIncomingCall && (
         <div className="incoming-call-popup">
@@ -382,6 +583,15 @@ set(onlineRef, { online: true });
           <button onClick={acceptCall}>Accept</button>
           <button onClick={rejectCall}>Reject</button>
         </div>
+      )}
+      {showGiftModal && (
+        <GiftComposerModal
+          onClose={() => setShowGiftModal(false)}
+          onSend={(giftMessage) => {
+            handleSendGift(giftMessage);
+            setShowGiftModal(false);
+          }}
+        />
       )}
 
       <div ref={chatEndRef} />
@@ -403,7 +613,7 @@ set(onlineRef, { online: true });
         </div>
       )}
 
-      <div className="chat-input-container">
+      <div className="chat-input-container"> 
         <input
           ref={chatInputRef}
           value={message}
@@ -412,6 +622,7 @@ set(onlineRef, { online: true });
           onKeyDown={(e) => e.key === 'Enter' && (replyTo ? sendReply() : sendMessage())}
           className="chat-input"
         />
+        
         <button 
           onClick={replyTo ? sendReply : sendMessage} 
           className="chat-button send-button"
@@ -421,6 +632,6 @@ set(onlineRef, { online: true });
       </div>
 
     </div>
-  </>
+  </div>
   );
 }

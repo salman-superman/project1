@@ -315,12 +315,12 @@ export default function CameraScreen() {
         </div>
       </div>
 
-      {/* Bottom Header */}
-      <div className="camera-bottom-header">
-        <div className="bottom-text">
-          <span>Camera Controls</span>
+        {/* Bottom Header */}
+        <div className="camera-bottom-header">
+          <div className="bottom-text">
+            <span>Camera Controls</span>
+          </div>
         </div>
-      </div>
 
       {/* Hamburger Menu */}
       <div onClick={tripleTap} className="hamburger-menu">

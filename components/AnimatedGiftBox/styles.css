@@ -1,0 +1,158 @@
+.gift-box {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  perspective: 1000px;
+  margin: 20px;
+}
+
+/* Opening animation */
+@keyframes openLid {
+  0% { transform: rotateX(0); }
+  100% { transform: rotateX(-180deg); }
+}
+
+@keyframes openBox {
+  0% { height: 100%; }
+  100% { height: 30%; }
+}
+
+/* Hearts animation */
+.hearts-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.heart {
+  position: absolute;
+  font-size: 1.5rem;
+  animation: float-up 2s ease-out forwards;
+  opacity: 0.8;
+}
+
+@keyframes float-up {
+  0% { 
+    transform: translateY(0) rotate(0deg);
+    opacity: 0.8;
+  }
+  100% { 
+    transform: translateY(-100px) rotate(20deg);
+    opacity: 0;
+  }
+}
+/* Closed State */
+.closed-gift {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.lid {
+  width: 100%;
+  height: 30%;
+  background: #e74c3c;
+  position: absolute;
+  top: 0;
+  border-radius: 5px 5px 0 0;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  transform-origin: bottom;
+  transition: transform 0.2s;
+}
+
+.box {
+  width: 100%;
+  height: 70%;
+  background: #c0392b;
+  position: absolute;
+  bottom: 0;
+  border-radius: 0 0 5px 5px;
+}
+
+.ribbon-horizontal {
+  position: absolute;
+  width: 100%;
+  height: 10%;
+  background: #f1c40f;
+  top: 45%;
+}
+
+.ribbon-vertical {
+  position: absolute;
+  width: 10%;
+  height: 100%;
+  background: #f1c40f;
+  left: 45%;
+}
+
+.hint {
+  position: absolute;
+  bottom: -25px;
+  width: 100%;
+  text-align: center;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+/* Opening State */
+.opening-gift {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.lid.opening {
+  animation: openLid 1s forwards;
+}
+
+.box.opening {
+  animation: openBox 1s forwards;
+}
+
+/* Open State */
+.open-gift {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.box-open {
+  width: 100%;
+  height: 30%;
+  background: #c0392b;
+  position: absolute;
+  bottom: 0;
+  border-radius: 0 0 5px 5px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.lid-open {
+  width: 100%;
+  height: 30%;
+  background: #e74c3c;
+  position: absolute;
+  top: 0;
+  transform: rotateX(-180deg);
+  transform-origin: bottom;
+  border-radius: 5px 5px 0 0;
+}
+
+.message {
+  padding: 10px;
+  background: white;
+  border-radius: 5px;
+  max-width: 90%;
+  word-wrap: break-word;
+  animation: messageAppear 0.5s 0.5s both;
+}
+
+@keyframes messageAppear {
+  from { transform: scale(0); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
